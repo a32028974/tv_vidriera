@@ -28,7 +28,11 @@
         #clock { font-size: 100px; font-weight: bold; color: var(--azul); }
         #weather { font-size: 40px; text-align: right; min-width: 300px; }
 
-        #media-wrapper { flex-grow: 1; background: #000; position: relative; overflow: hidden; }
+        #media-wrapper { flex-grow: 1; background: #000; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center;}
+        
+        /* Mensaje de estado al medio de la pantalla */
+        #estado { font-size: 50px; color: yellow; z-index: 100; text-align: center; }
+        
         video, img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; display: none; }
 
         footer { height: 80px; background: var(--azul); display: flex; align-items: center; overflow: hidden; }
@@ -48,6 +52,7 @@
         </header>
 
         <div id="media-wrapper">
+            <div id="estado">Conectando con Google Drive...</div>
             <video id="player" muted autoplay playsinline></video>
             <img id="image-viewer" src="">
         </div>
@@ -63,19 +68,32 @@
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpYBcuSBJCkmCq6FPluaCZaTA0ESezmi_rndYNyMCXID9bDYkscZkRlCC9fl5VJmqf1A/exec';
         let mediaList = [];
         let currentIndex = 0;
+        let arrancado = false;
+        
         const player = document.getElementById('player');
         const imgViewer = document.getElementById('image-viewer');
+        const estado = document.getElementById('estado');
 
         async function cargarMedia() {
             try {
+                estado.innerText = "Buscando videos e imágenes...";
                 const res = await fetch(SCRIPT_URL);
-                mediaList = await res.json();
+                
+                // Si Google nos manda un HTML de error o login, esto va a fallar y salta al catch
+                mediaList = await res.json(); 
+                
                 console.log("Archivos encontrados:", mediaList);
-                if (mediaList.length > 0 && player.style.display === '' && imgViewer.style.display === '') {
-                    mostrarSiguiente(); // Arranca directo si es la primera vez
+                
+                if (mediaList.length === 0) {
+                    estado.innerText = "La carpeta de Drive está vacía.";
+                } else if (!arrancado) {
+                    arrancado = true;
+                    estado.style.display = 'none'; // Ocultamos el texto
+                    mostrarSiguiente();
                 }
             } catch (e) { 
-                console.error("Error al cargar script (revisá tu fecha/hora o internet):", e);
+                console.error("Error al cargar script:", e);
+                estado.innerText = "Error leyendo Drive. Reintentando en 5 seg...";
                 setTimeout(cargarMedia, 5000); 
             }
         }
@@ -89,7 +107,11 @@
                 imgViewer.style.display = 'none';
                 player.style.display = 'block';
                 player.src = url;
-                player.play().catch(e => console.log("La TV requiere habilitar autoplay en ajustes:", e));
+                player.play().catch(e => {
+                    estado.style.display = 'block';
+                    estado.innerText = "Autoplay bloqueado. Tocá la pantalla para empezar.";
+                    document.body.onclick = () => { player.play(); estado.style.display = 'none'; };
+                });
             } else {
                 player.style.display = 'none';
                 player.pause();
@@ -106,8 +128,12 @@
 
         function proximoItem() {
             currentIndex = (currentIndex + 1) % mediaList.length;
-            if (currentIndex === 0) cargarMedia(); // Vuelve a leer Drive al terminar el ciclo
-            else mostrarSiguiente();
+            if (currentIndex === 0) {
+                arrancado = false; 
+                cargarMedia(); // Recarga al final de la lista
+            } else {
+                mostrarSiguiente();
+            }
         }
 
         player.onended = proximoItem;
@@ -131,11 +157,10 @@
             } catch (e) { document.getElementById('temp').innerText = "--°C"; }
         }
 
-        // Arranca todo al cargar la página
         window.onload = () => { 
             cargarMedia(); 
             getWeather(); 
-            setInterval(getWeather, 900000); // Actualiza clima cada 15 min
+            setInterval(getWeather, 900000);
         };
     </script>
 </body>
