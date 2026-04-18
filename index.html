@@ -7,14 +7,9 @@
         :root { --azul: #007bff; --negro: #000; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        /* Evita que cualquier texto loco se escape */
         body { 
-            background: var(--negro); 
-            overflow: hidden; 
-            width: 100vw; 
-            height: 100vh;
-            color: white;
-            font-family: Arial, sans-serif;
+            background: var(--negro); overflow: hidden; 
+            width: 100vw; height: 100vh; color: white; font-family: Arial, sans-serif;
         }
 
         #main-container {
@@ -42,18 +37,9 @@
             animation: move 20s linear infinite; 
         }
         @keyframes move { 0% { transform: translateX(100%); } 100% { transform: translateX(-150%); } }
-
-        #play-btn { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.95); z-index: 999; display: flex; 
-            justify-content: center; align-items: center; font-size: 50px; 
-            text-align: center; cursor: pointer;
-        }
     </style>
 </head>
 <body>
-
-    <div id="play-btn">TOCÁ PARA INICIAR</div>
 
     <div id="main-container">
         <header>
@@ -62,7 +48,7 @@
         </header>
 
         <div id="media-wrapper">
-            <video id="player" muted playsinline></video>
+            <video id="player" muted autoplay playsinline></video>
             <img id="image-viewer" src="">
         </div>
 
@@ -79,21 +65,19 @@
         let currentIndex = 0;
         const player = document.getElementById('player');
         const imgViewer = document.getElementById('image-viewer');
-        const playBtn = document.getElementById('play-btn');
-
-        playBtn.onclick = () => {
-            playBtn.style.display = 'none';
-            if (mediaList.length > 0) mostrarSiguiente();
-        };
 
         async function cargarMedia() {
             try {
                 const res = await fetch(SCRIPT_URL);
                 mediaList = await res.json();
-                if (playBtn.style.display === 'none' && player.style.display === 'none' && imgViewer.style.display === 'none') {
-                    mostrarSiguiente();
+                console.log("Archivos encontrados:", mediaList);
+                if (mediaList.length > 0 && player.style.display === '' && imgViewer.style.display === '') {
+                    mostrarSiguiente(); // Arranca directo si es la primera vez
                 }
-            } catch (e) { setTimeout(cargarMedia, 5000); }
+            } catch (e) { 
+                console.error("Error al cargar script (revisá tu fecha/hora o internet):", e);
+                setTimeout(cargarMedia, 5000); 
+            }
         }
 
         function mostrarSiguiente() {
@@ -105,7 +89,7 @@
                 imgViewer.style.display = 'none';
                 player.style.display = 'block';
                 player.src = url;
-                player.play().catch(() => {});
+                player.play().catch(e => console.log("La TV requiere habilitar autoplay en ajustes:", e));
             } else {
                 player.style.display = 'none';
                 player.pause();
@@ -122,22 +106,23 @@
 
         function proximoItem() {
             currentIndex = (currentIndex + 1) % mediaList.length;
-            if (currentIndex === 0) cargarMedia();
+            if (currentIndex === 0) cargarMedia(); // Vuelve a leer Drive al terminar el ciclo
             else mostrarSiguiente();
         }
 
         player.onended = proximoItem;
 
+        // Reloj
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit', hour12: false});
         }, 1000);
 
+        // Clima
         async function getWeather() {
             try {
                 const res = await fetch('https://wttr.in/San+Miguel,Argentina?format=%t');
                 const t = await res.text();
-                // SEGURIDAD: Si devuelve más de 10 caracteres o cosas raras, es basura
                 if (t.length > 10 || t.includes('{') || t.includes('html')) {
                     document.getElementById('temp').innerText = "--°C";
                 } else {
@@ -146,7 +131,12 @@
             } catch (e) { document.getElementById('temp').innerText = "--°C"; }
         }
 
-        window.onload = () => { cargarMedia(); getWeather(); setInterval(getWeather, 900000); };
+        // Arranca todo al cargar la página
+        window.onload = () => { 
+            cargarMedia(); 
+            getWeather(); 
+            setInterval(getWeather, 900000); // Actualiza clima cada 15 min
+        };
     </script>
 </body>
 </html>
