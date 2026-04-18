@@ -2,13 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Óptica Cristal - Cartelería Digital</title>
+    <title>Óptica Cristal Vidriera</title>
     <style>
         :root { --azul: #007bff; --negro: #000; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--negro); overflow: hidden; width: 100vw; height: 100vh; }
+        
+        /* Evita que cualquier texto loco se escape */
+        body { 
+            background: var(--negro); 
+            overflow: hidden; 
+            width: 100vw; 
+            height: 100vh;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
 
-        /* CONFIGURACIÓN PARA TV VERTICAL (ROTADA POR SOFTWARE) */
         #main-container {
             width: 1920px; height: 1080px;
             position: absolute; top: 0; left: 100%;
@@ -17,34 +25,35 @@
         }
 
         header { 
-            height: 180px; display: flex; justify-content: space-around; 
+            height: 160px; display: flex; justify-content: space-around; 
             align-items: center; background: #111; border-bottom: 6px solid var(--azul); 
-            padding: 0 40px; 
+            padding: 0 40px; overflow: hidden;
         }
-        #clock { font-size: 110px; font-weight: bold; color: var(--azul); font-family: sans-serif; }
-        #weather { font-size: 45px; color: white; text-align: right; font-family: sans-serif; }
+        
+        #clock { font-size: 100px; font-weight: bold; color: var(--azul); }
+        #weather { font-size: 40px; text-align: right; min-width: 300px; }
 
         #media-wrapper { flex-grow: 1; background: #000; position: relative; overflow: hidden; }
         video, img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; display: none; }
 
-        footer { height: 90px; background: var(--azul); display: flex; align-items: center; overflow: hidden; }
+        footer { height: 80px; background: var(--azul); display: flex; align-items: center; overflow: hidden; }
         .ticker { 
-            white-space: nowrap; font-size: 45px; font-weight: bold; color: white; 
-            font-family: sans-serif; animation: move 25s linear infinite; 
+            white-space: nowrap; font-size: 40px; font-weight: bold; 
+            animation: move 20s linear infinite; 
         }
         @keyframes move { 0% { transform: translateX(100%); } 100% { transform: translateX(-150%); } }
 
         #play-btn { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); color: white; display: flex; 
-            justify-content: center; align-items: center; z-index: 999; 
-            font-size: 50px; cursor: pointer; font-family: sans-serif; text-align: center;
+            background: rgba(0,0,0,0.95); z-index: 999; display: flex; 
+            justify-content: center; align-items: center; font-size: 50px; 
+            text-align: center; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div id="play-btn">TOCÁ LA PANTALLA <br> PARA INICIAR VIDRIERA</div>
+    <div id="play-btn">TOCÁ PARA INICIAR</div>
 
     <div id="main-container">
         <header>
@@ -59,15 +68,13 @@
 
         <footer>
             <div class="ticker">
-                +++ ÓPTICA CRISTAL SAN MIGUEL +++ LAS MEJORES MARCAS +++ EXAMEN VISUAL +++ LENTES DE CONTACTO +++ REPARACIONES EN EL ACTO +++
+                +++ ÓPTICA CRISTAL SAN MIGUEL +++ LAS MEJORES MARCAS +++ EXAMEN VISUAL +++ LENTES DE CONTACTO +++
             </div>
         </footer>
     </div>
 
     <script>
-        // URL DE TU SCRIPT DE GOOGLE
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpYBcuSBJCkmCq6FPluaCZaTA0ESezmi_rndYNyMCXID9bDYkscZkRlCC9fl5VJmqf1A/exec';
-        
         let mediaList = [];
         let currentIndex = 0;
         const player = document.getElementById('player');
@@ -83,20 +90,14 @@
             try {
                 const res = await fetch(SCRIPT_URL);
                 mediaList = await res.json();
-                console.log("Archivos cargados:", mediaList);
-                // Si ya se dio inicio, pero la lista se refrescó, seguimos
                 if (playBtn.style.display === 'none' && player.style.display === 'none' && imgViewer.style.display === 'none') {
                     mostrarSiguiente();
                 }
-            } catch (e) { 
-                console.error("Error cargando media:", e);
-                setTimeout(cargarMedia, 5000); 
-            }
+            } catch (e) { setTimeout(cargarMedia, 5000); }
         }
 
         function mostrarSiguiente() {
             if (mediaList.length === 0) return;
-            
             const item = mediaList[currentIndex];
             const url = `https://drive.google.com/uc?export=download&id=${item.id}`;
 
@@ -104,61 +105,48 @@
                 imgViewer.style.display = 'none';
                 player.style.display = 'block';
                 player.src = url;
-                player.play().catch(e => console.log("Error autoplay:", e));
+                player.play().catch(() => {});
             } else {
                 player.style.display = 'none';
                 player.pause();
                 imgViewer.style.display = 'block';
                 imgViewer.src = url;
 
-                // Lógica de tiempo: busca el número después de "img_"
-                let segundos = 10; 
+                let segundos = 10;
                 const match = item.name.match(/img_(\d+)/);
-                if (match) {
-                    segundos = parseInt(match[1]);
-                }
+                if (match) segundos = parseInt(match[1]);
 
-                console.log(`Mostrando imagen: ${item.name} por ${segundos} seg.`);
-
-                setTimeout(() => {
-                    proximoItem();
-                }, segundos * 1000);
+                setTimeout(proximoItem, segundos * 1000);
             }
         }
 
         function proximoItem() {
-            currentIndex++;
-            if (currentIndex >= mediaList.length) {
-                currentIndex = 0;
-                cargarMedia(); // Recargamos lista de Drive al terminar la vuelta
-            } else {
-                mostrarSiguiente();
-            }
+            currentIndex = (currentIndex + 1) % mediaList.length;
+            if (currentIndex === 0) cargarMedia();
+            else mostrarSiguiente();
         }
 
-        // El video pasa al proximo solo cuando termina
         player.onended = proximoItem;
 
-        // Reloj
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit', hour12: false});
         }, 1000);
 
-        // Clima
         async function getWeather() {
             try {
                 const res = await fetch('https://wttr.in/San+Miguel,Argentina?format=%t');
                 const t = await res.text();
-                document.getElementById('temp').innerText = t.replace('+', '');
-            } catch (e) { }
+                // SEGURIDAD: Si devuelve más de 10 caracteres o cosas raras, es basura
+                if (t.length > 10 || t.includes('{') || t.includes('html')) {
+                    document.getElementById('temp').innerText = "--°C";
+                } else {
+                    document.getElementById('temp').innerText = t.replace('+', '').trim();
+                }
+            } catch (e) { document.getElementById('temp').innerText = "--°C"; }
         }
 
-        window.onload = () => { 
-            cargarMedia(); 
-            getWeather(); 
-            setInterval(getWeather, 900000); 
-        };
+        window.onload = () => { cargarMedia(); getWeather(); setInterval(getWeather, 900000); };
     </script>
 </body>
 </html>
