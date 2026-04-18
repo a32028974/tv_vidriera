@@ -51,10 +51,11 @@
         // CONFIGURACIÓN PRO
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpYBcuSBJCkmCq6FPluaCZaTA0ESezmi_rndYNyMCXID9bDYkscZkRlCC9fl5VJmqf1A/exec';
         
-        // ACÁ AGREGÁ LOS NOMBRES DE TUS VIDEOS EN GITHUB
-        const misVideos = [
-            'videos/mdq1.mp4'
-        ];
+        // GENERADOR AUTOMÁTICO DE LISTA DE VIDEOS (1.mp4 al 37.mp4)
+        const misVideos = [];
+        for (let i = 1; i <= 100; i++) {
+            misVideos.push(`videos/${i}.mp4`);
+        }
 
         let fotosDrive = [];
         let listaFinal = [];
@@ -87,7 +88,7 @@
             if (actual.tipo === 'video') {
                 viewer.style.display = 'none';
                 player.style.display = 'block';
-                player.src = actual.url; // GitHub sirve el archivo directo
+                player.src = actual.url;
                 player.play();
             } else {
                 player.style.display = 'none';
@@ -107,11 +108,17 @@
             index++;
             if (index >= listaFinal.length) {
                 index = 0;
-                armarLista(); // Al terminar la vuelta, chequea si hay fotos nuevas en Drive
+                armarLista();
             } else {
                 reproducir();
             }
         }
+
+        // SALVAVIDAS: Si un video no existe en GitHub, salta al siguiente en lugar de trabarse
+        player.onerror = () => {
+            console.error("Video no encontrado o error de carga. Saltando...");
+            siguiente();
+        };
 
         player.onended = siguiente;
 
