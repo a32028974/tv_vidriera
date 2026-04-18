@@ -2,15 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Óptica Cristal Vidriera</title>
+    <title>Vidriera Pro - Óptica Cristal</title>
     <style>
         :root { --azul: #007bff; --negro: #000; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
-            background: var(--negro); overflow: hidden; 
-            width: 100vw; height: 100vh; color: white; font-family: Arial, sans-serif;
-        }
+        body { background: var(--negro); overflow: hidden; width: 100vw; height: 100vh; color: white; font-family: Arial, sans-serif; }
 
         #main-container {
             width: 1920px; height: 1080px;
@@ -19,26 +15,15 @@
             display: flex; flex-direction: column; background: #000;
         }
 
-        header { 
-            height: 160px; display: flex; justify-content: space-around; 
-            align-items: center; background: #111; border-bottom: 6px solid var(--azul); 
-            padding: 0 40px; overflow: hidden;
-        }
-        
+        header { height: 160px; display: flex; justify-content: space-around; align-items: center; background: #111; border-bottom: 6px solid var(--azul); padding: 0 40px; }
         #clock { font-size: 100px; font-weight: bold; color: var(--azul); }
         #weather { font-size: 40px; text-align: right; min-width: 300px; }
 
         #media-wrapper { flex-grow: 1; background: #000; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center;}
-        
-        #estado { font-size: 50px; color: yellow; z-index: 100; text-align: center; padding: 20px; background: rgba(0,0,0,0.8); border-radius: 10px; }
-        
         video, img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; display: none; }
 
         footer { height: 80px; background: var(--azul); display: flex; align-items: center; overflow: hidden; }
-        .ticker { 
-            white-space: nowrap; font-size: 40px; font-weight: bold; 
-            animation: move 20s linear infinite; 
-        }
+        .ticker { white-space: nowrap; font-size: 40px; font-weight: bold; animation: move 20s linear infinite; }
         @keyframes move { 0% { transform: translateX(100%); } 100% { transform: translateX(-150%); } }
     </style>
 </head>
@@ -51,8 +36,7 @@
         </header>
 
         <div id="media-wrapper">
-            <div id="estado">Conectando con Google Drive...</div>
-            <video id="player" muted playsinline></video>
+            <video id="player" muted autoplay playsinline></video>
             <img id="image-viewer"> 
         </div>
 
@@ -64,91 +48,85 @@
     </div>
 
     <script>
+        // CONFIGURACIÓN PRO
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpYBcuSBJCkmCq6FPluaCZaTA0ESezmi_rndYNyMCXID9bDYkscZkRlCC9fl5VJmqf1A/exec';
-        let mediaList = [];
-        let currentIndex = 0;
-        let arrancado = false;
-        let timerTimeout;
+        
+        // ACÁ AGREGÁ LOS NOMBRES DE TUS VIDEOS EN GITHUB
+        const misVideos = [
+            'videos/mdq1.mp4',
+            'videos/mdq2.mp4',
+            'videos/mdq3.mp4',
+            'videos/mdq4.mp4',
+            'videos/mdq5.mp4',
+            'videos/mdq6.mp4',
+            'videos/mdq7.mp4',
+            'videos/mdq8.mp4',
+            'videos/mdq9.mp4',
+            'videos/mdq10.mp4',
+            'videos/mdq11.mp4',
+            'videos/promo_1.mp4'
+        ];
+
+        let fotosDrive = [];
+        let listaFinal = [];
+        let index = 0;
+        let timer;
         
         const player = document.getElementById('player');
-        const imgViewer = document.getElementById('image-viewer');
-        const estado = document.getElementById('estado');
+        const viewer = document.getElementById('image-viewer');
 
-        async function cargarMedia() {
+        async function armarLista() {
             try {
-                estado.innerText = "Buscando archivos...";
-                estado.style.display = 'block';
-                
                 const res = await fetch(SCRIPT_URL);
-                mediaList = await res.json(); 
-                
-                if (mediaList.length === 0) {
-                    estado.innerText = "La carpeta de Drive está vacía.";
-                } else if (!arrancado) {
-                    arrancado = true;
-                    estado.style.display = 'none';
-                    mostrarSiguiente();
-                }
-            } catch (e) { 
-                estado.innerText = "Error leyendo Drive. Reintentando...";
-                setTimeout(cargarMedia, 5000); 
-            }
+                const data = await res.json();
+                fotosDrive = data.filter(f => f.type === 'image');
+
+                listaFinal = [];
+                // Metemos los videos de GitHub
+                misVideos.forEach(v => listaFinal.push({ tipo: 'video', url: v }));
+                // Metemos las fotos de Drive
+                fotosDrive.forEach(f => listaFinal.push({ tipo: 'foto', id: f.id, nombre: f.name }));
+
+                if (listaFinal.length > 0) reproducir();
+            } catch (e) { setTimeout(armarLista, 5000); }
         }
 
-        function mostrarSiguiente() {
-            clearTimeout(timerTimeout);
-            if (mediaList.length === 0) return;
-            
-            const item = mediaList[currentIndex];
-            estado.style.display = 'none';
+        function reproducir() {
+            clearTimeout(timer);
+            const actual = listaFinal[index];
 
-            if (item.type === 'video') {
-                imgViewer.style.display = 'none';
+            if (actual.tipo === 'video') {
+                viewer.style.display = 'none';
                 player.style.display = 'block';
-                
-                // BYPASS VIDEO: Agregamos &confirm=t para saltar la alerta de antivirus
-                player.src = `https://drive.google.com/uc?export=download&confirm=t&id=${item.id}`;
-                
-                player.play().catch(e => {
-                    estado.style.display = 'block';
-                    estado.innerText = "Hacé un clic en la pantalla para permitir los videos.";
-                    document.body.onclick = () => { player.play(); estado.style.display = 'none'; };
-                });
+                player.src = actual.url; // GitHub sirve el archivo directo
+                player.play();
             } else {
                 player.style.display = 'none';
                 player.pause();
-                imgViewer.style.display = 'block';
-                
-                // BYPASS IMÁGENES: Usamos la API oficial de Thumbnails a resolución 1920x1080
-                imgViewer.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w1920-h1080`;
+                viewer.style.display = 'block';
+                viewer.src = `https://drive.google.com/thumbnail?id=${actual.id}&sz=w1920-h1080`;
 
-                let segundos = 10;
-                const match = item.name.match(/img_(\d+)/);
-                if (match) segundos = parseInt(match[1]);
+                let ms = 10000;
+                const match = actual.nombre.match(/img_(\d+)/);
+                if (match) ms = parseInt(match[1]) * 1000;
 
-                timerTimeout = setTimeout(proximoItem, segundos * 1000);
+                timer = setTimeout(siguiente, ms);
             }
         }
 
-        imgViewer.onerror = () => {
-            console.error("Google bloqueó esta imagen, saltando a la siguiente...");
-            clearTimeout(timerTimeout);
-            proximoItem();
-        };
-
-        function proximoItem() {
-            currentIndex++;
-            if (currentIndex >= mediaList.length) {
-                currentIndex = 0;
-                arrancado = false; 
-                cargarMedia();
+        function siguiente() {
+            index++;
+            if (index >= listaFinal.length) {
+                index = 0;
+                armarLista(); // Al terminar la vuelta, chequea si hay fotos nuevas en Drive
             } else {
-                mostrarSiguiente();
+                reproducir();
             }
         }
 
-        player.onended = proximoItem;
+        player.onended = siguiente;
 
+        // Reloj y Clima
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit', hour12: false});
@@ -158,19 +136,11 @@
             try {
                 const res = await fetch('https://wttr.in/San+Miguel,Argentina?format=%t');
                 const t = await res.text();
-                if (t.length > 10 || t.includes('{') || t.includes('html')) {
-                    document.getElementById('temp').innerText = "--°C";
-                } else {
-                    document.getElementById('temp').innerText = t.replace('+', '').trim();
-                }
-            } catch (e) { document.getElementById('temp').innerText = "--°C"; }
+                document.getElementById('temp').innerText = (t.length < 10) ? t.replace('+', '').trim() : "--°C";
+            } catch (e) { }
         }
 
-        window.onload = () => { 
-            cargarMedia(); 
-            getWeather(); 
-            setInterval(getWeather, 900000);
-        };
+        window.onload = () => { armarLista(); getWeather(); setInterval(getWeather, 900000); };
     </script>
 </body>
 </html>
