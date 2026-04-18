@@ -30,8 +30,7 @@
 
         #media-wrapper { flex-grow: 1; background: #000; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center;}
         
-        /* Mensaje de estado al medio de la pantalla */
-        #estado { font-size: 50px; color: yellow; z-index: 100; text-align: center; }
+        #estado { font-size: 50px; color: yellow; z-index: 100; text-align: center; padding: 20px; background: rgba(0,0,0,0.8); border-radius: 10px; }
         
         video, img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; display: none; }
 
@@ -69,6 +68,7 @@
         let mediaList = [];
         let currentIndex = 0;
         let arrancado = false;
+        let timerTimeout;
         
         const player = document.getElementById('player');
         const imgViewer = document.getElementById('image-viewer');
@@ -76,61 +76,71 @@
 
         async function cargarMedia() {
             try {
-                estado.innerText = "Buscando videos e imágenes...";
-                const res = await fetch(SCRIPT_URL);
+                estado.innerText = "Buscando archivos...";
+                estado.style.display = 'block';
                 
-                // Si Google nos manda un HTML de error o login, esto va a fallar y salta al catch
+                const res = await fetch(SCRIPT_URL);
                 mediaList = await res.json(); 
                 
-                console.log("Archivos encontrados:", mediaList);
-                
                 if (mediaList.length === 0) {
-                    estado.innerText = "La carpeta de Drive está vacía.";
+                    estado.innerText = "La carpeta está vacía.";
                 } else if (!arrancado) {
                     arrancado = true;
-                    estado.style.display = 'none'; // Ocultamos el texto
+                    estado.style.display = 'none';
                     mostrarSiguiente();
                 }
             } catch (e) { 
-                console.error("Error al cargar script:", e);
                 estado.innerText = "Error leyendo Drive. Reintentando en 5 seg...";
                 setTimeout(cargarMedia, 5000); 
             }
         }
 
         function mostrarSiguiente() {
+            clearTimeout(timerTimeout);
             if (mediaList.length === 0) return;
+            
             const item = mediaList[currentIndex];
-            const url = `https://drive.google.com/uc?export=download&id=${item.id}`;
+            estado.style.display = 'none';
 
             if (item.type === 'video') {
                 imgViewer.style.display = 'none';
                 player.style.display = 'block';
-                player.src = url;
+                // URL clásica para videos
+                player.src = `https://drive.google.com/uc?export=download&id=${item.id}`;
                 player.play().catch(e => {
                     estado.style.display = 'block';
-                    estado.innerText = "Autoplay bloqueado. Tocá la pantalla para empezar.";
+                    estado.innerText = "Tocá la pantalla para habilitar el video.";
                     document.body.onclick = () => { player.play(); estado.style.display = 'none'; };
                 });
             } else {
                 player.style.display = 'none';
                 player.pause();
                 imgViewer.style.display = 'block';
-                imgViewer.src = url;
+                // NUEVA URL: Link directo moderno de Google para imágenes
+                imgViewer.src = `https://lh3.googleusercontent.com/d/${item.id}`;
 
                 let segundos = 10;
                 const match = item.name.match(/img_(\d+)/);
                 if (match) segundos = parseInt(match[1]);
 
-                setTimeout(proximoItem, segundos * 1000);
+                timerTimeout = setTimeout(proximoItem, segundos * 1000);
             }
         }
 
+        // Si la imagen de Drive tira error (ej. link roto o bloqueado), salta a la siguiente
+        imgViewer.onerror = () => {
+            estado.style.display = 'block';
+            estado.innerText = "Cargando siguiente...";
+            clearTimeout(timerTimeout);
+            setTimeout(proximoItem, 1000);
+        };
+
         function proximoItem() {
-            currentIndex = (currentIndex + 1) % mediaList.length;
-            if (currentIndex === 0) {
+            currentIndex++;
+            if (currentIndex >= mediaList.length) {
+                currentIndex = 0;
                 arrancado = false; 
-                cargarMedia(); // Recarga al final de la lista
+                cargarMedia(); // Recarga la lista al terminar
             } else {
                 mostrarSiguiente();
             }
@@ -138,13 +148,11 @@
 
         player.onended = proximoItem;
 
-        // Reloj
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit', hour12: false});
         }, 1000);
 
-        // Clima
         async function getWeather() {
             try {
                 const res = await fetch('https://wttr.in/San+Miguel,Argentina?format=%t');
