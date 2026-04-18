@@ -52,8 +52,8 @@
 
         <div id="media-wrapper">
             <div id="estado">Conectando con Google Drive...</div>
-            <video id="player" muted autoplay playsinline></video>
-            <img id="image-viewer" src="">
+            <video id="player" muted playsinline></video>
+            <img id="image-viewer"> 
         </div>
 
         <footer>
@@ -83,14 +83,14 @@
                 mediaList = await res.json(); 
                 
                 if (mediaList.length === 0) {
-                    estado.innerText = "La carpeta está vacía.";
+                    estado.innerText = "La carpeta de Drive está vacía.";
                 } else if (!arrancado) {
                     arrancado = true;
                     estado.style.display = 'none';
                     mostrarSiguiente();
                 }
             } catch (e) { 
-                estado.innerText = "Error leyendo Drive. Reintentando en 5 seg...";
+                estado.innerText = "Error leyendo Drive. Reintentando...";
                 setTimeout(cargarMedia, 5000); 
             }
         }
@@ -105,10 +105,13 @@
             if (item.type === 'video') {
                 imgViewer.style.display = 'none';
                 player.style.display = 'block';
-                player.src = `https://drive.google.com/uc?export=view&id=${item.id}`;
+                
+                // BYPASS VIDEO: Agregamos &confirm=t para saltar la alerta de antivirus
+                player.src = `https://drive.google.com/uc?export=download&confirm=t&id=${item.id}`;
+                
                 player.play().catch(e => {
                     estado.style.display = 'block';
-                    estado.innerText = "Tocá la pantalla para habilitar el video.";
+                    estado.innerText = "Hacé un clic en la pantalla para permitir los videos.";
                     document.body.onclick = () => { player.play(); estado.style.display = 'none'; };
                 });
             } else {
@@ -116,8 +119,8 @@
                 player.pause();
                 imgViewer.style.display = 'block';
                 
-                // ACÁ ESTABA EL ERROR MÍO. YA ESTÁ ARREGLADO CON EL ENLACE CORRECTO:
-                imgViewer.src = `https://drive.google.com/uc?export=view&id=${item.id}`;
+                // BYPASS IMÁGENES: Usamos la API oficial de Thumbnails a resolución 1920x1080
+                imgViewer.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w1920-h1080`;
 
                 let segundos = 10;
                 const match = item.name.match(/img_(\d+)/);
@@ -128,11 +131,9 @@
         }
 
         imgViewer.onerror = () => {
-            console.error("No se pudo cargar la imagen:", imgViewer.src);
-            estado.style.display = 'block';
-            estado.innerText = "Cargando siguiente...";
+            console.error("Google bloqueó esta imagen, saltando a la siguiente...");
             clearTimeout(timerTimeout);
-            setTimeout(proximoItem, 2000);
+            proximoItem();
         };
 
         function proximoItem() {
