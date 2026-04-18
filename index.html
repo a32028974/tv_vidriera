@@ -2,87 +2,174 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Pantalla Óptica Cristal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Óptica Cristal - Vidriera</title>
     <style>
-        /* Mismo CSS que antes, con el truco de rotación */
-        :root { --bg: #000; --accent: #007bff; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; }
-
-        #main-container {
-            width: 1920px; height: 1080px;
-            position: absolute; top: 0; left: 100%;
-            transform: rotate(90deg); transform-origin: top left;
-            display: flex; flex-direction: column;
+        :root {
+            --azul-optica: #007bff;
+            --negro-fondo: #000000;
+            --blanco: #ffffff;
         }
 
-        header { height: 150px; display: flex; justify-content: space-around; align-items: center; background: #111; border-bottom: 4px solid var(--accent); }
-        #clock { font-size: 90px; font-weight: bold; color: var(--accent); }
-        #video-wrapper { flex-grow: 1; background: #000; display: flex; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        footer { height: 80px; background: var(--accent); overflow: hidden; display: flex; align-items: center; }
-        .ticker { display: inline-block; white-space: nowrap; animation: move 20s linear infinite; font-size: 35px; font-weight: bold; }
-        @keyframes move { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--negro-fondo);
+            color: var(--blanco);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* CABECERA (Reloj y Clima) */
+        header {
+            height: 15vh;
+            background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 4px solid var(--azul-optica);
+            text-align: center;
+        }
+
+        #clock {
+            font-size: 12vw; /* Grande para que se vea de lejos */
+            font-weight: bold;
+            line-height: 1;
+            color: var(--azul-optica);
+        }
+
+        #weather {
+            font-size: 5vw;
+            margin-top: 5px;
+        }
+
+        /* REPRODUCTOR DE VIDEO (Ocupa el centro) */
+        #video-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Para que el video llene el ancho vertical */
+        }
+
+        /* BANNER DE NOTICIAS (Abajo) */
+        footer {
+            height: 8vh;
+            background: var(--azul-optica);
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .ticker {
+            white-space: nowrap;
+            font-size: 5vh;
+            font-weight: bold;
+            text-transform: uppercase;
+            animation: marquee 20s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-100%); }
+        }
     </style>
 </head>
 <body>
-    <div id="main-container">
-        <header>
-            <div id="clock">00:00</div>
-            <div id="weather" style="font-size: 30px;">San Miguel <span id="temp">--°C</span></div>
-        </header>
-        <div id="video-wrapper">
-            <video id="player" muted playsinline></video>
-        </div>
-        <footer>
-            <div class="ticker"> ⚡ BIENVENIDOS A ÓPTICA CRISTAL SAN MIGUEL - LAS MEJORES MARCAS AL MEJOR PRECIO ⚡ </div>
-        </footer>
+
+    <header>
+        <div id="clock">00:00</div>
+        <div id="weather">San Miguel <span id="temp">--°</span></div>
+    </header>
+
+    <div id="video-container">
+        <video id="player" muted playsinline></video>
     </div>
 
+    <footer>
+        <div class="ticker" id="noticias">
+            +++ ÓPTICA CRISTAL SAN MIGUEL +++ LAS MEJORES MARCAS +++ CUOTAS SIN INTERÉS +++ LENTES DE CONTACTO +++ 
+        </div>
+    </footer>
+
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpYBcuSBJCkmCq6FPluaCZaTA0ESezmi_rndYNyMCXID9bDYkscZkRlCC9fl5VJmqf1A/exec';
+        // 1. CONEXIÓN CON TU GOOGLE DRIVE (Vía Apps Script)
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpYBcuSBJCkmCq6FPluaCZaTA0ESezmi_rndYNyMCXID9bDYkscZkRlCC9fl5VJmqf1A/exec
+
+'; 
+        
         let videoList = [];
         let currentIndex = 0;
         const player = document.getElementById('player');
 
-        async function loadVideos() {
+        async function cargarVideos() {
             try {
                 const response = await fetch(SCRIPT_URL);
                 videoList = await response.json();
-                if (videoList.length > 0) playVideo();
-            } catch (e) { console.error("Error cargando lista", e); }
+                console.log("Videos encontrados:", videoList);
+                if (videoList.length > 0) reproducir();
+            } catch (error) {
+                console.error("Error al cargar videos:", error);
+                setTimeout(cargarVideos, 10000); // Reintenta cada 10 seg si falla
+            }
         }
 
-        function playVideo() {
+        function reproducir() {
+            if (videoList.length === 0) return;
+            
             const id = videoList[currentIndex];
             player.src = `https://drive.google.com/uc?export=download&id=${id}`;
-            player.play();
+            player.play().catch(e => console.log("Esperando interacción del usuario..."));
+            
             currentIndex = (currentIndex + 1) % videoList.length;
         }
 
         player.onended = () => {
-            // Cada vez que termina un ciclo, refrescamos la lista por si subiste videos nuevos
-            if (currentIndex === 0) loadVideos(); 
-            else playVideo();
+            // Si llegamos al final de la lista, volvemos a preguntar al script
+            // por si agregaste videos nuevos a la carpeta de Drive
+            if (currentIndex === 0) cargarVideos(); 
+            else reproducir();
         };
 
-        // Reloj
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }, 1000);
-
-        // Clima
-        async function getWeather() {
-            const res = await fetch('https://wttr.in/San+Miguel,Argentina?format=%t');
-            document.getElementById('temp').innerText = await res.text();
+        // 2. RELOJ
+        function actualizarReloj() {
+            const ahora = new Date();
+            const h = String(ahora.getHours()).padStart(2, '0');
+            const m = String(ahora.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').innerText = `${h}:${m}`;
         }
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj();
 
-        window.onload = () => {
-            loadVideos();
-            getWeather();
-            setInterval(getWeather, 600000);
-        };
+        // 3. CLIMA (San Miguel)
+        async function actualizarClima() {
+            try {
+                const res = await fetch('https://wttr.in/San+Miguel,Argentina?format=%t');
+                const t = await res.text();
+                document.getElementById('temp').innerText = t;
+            } catch (e) { 
+                document.getElementById('temp').innerText = "--°"; 
+            }
+        }
+        setInterval(actualizarClima, 900000); // Cada 15 min
+        actualizarClima();
+
+        // 4. INICIO AUTOMÁTICO
+        window.onload = cargarVideos;
+
+        // Si la TV bloquea el video por falta de interacción, un clic en cualquier lado lo activa
+        document.body.addEventListener('click', () => player.play(), {once: true});
     </script>
 </body>
 </html>
