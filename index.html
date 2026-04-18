@@ -2,84 +2,49 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Óptica Cristal San Miguel</title>
+    <title>Óptica Cristal - Cartelería Digital</title>
     <style>
         :root { --azul: #007bff; --negro: #000; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--negro); overflow: hidden; width: 100vw; height: 100vh; }
 
-        body { 
-            background: var(--negro); 
-            overflow: hidden; 
-            width: 100vw; 
-            height: 100vh; 
-        }
-
-        /* ESTA PARTE GIRA TODO PARA QUE EN LA TELE SE VEA DERECHO */
+        /* CONFIGURACIÓN PARA TV VERTICAL (ROTADA POR SOFTWARE) */
         #main-container {
-            width: 1920px; /* Largo de la tele */
-            height: 1080px; /* Ancho de la tele */
-            position: absolute;
-            top: 0;
-            left: 100%;
-            transform: rotate(90deg);
-            transform-origin: top left;
-            display: flex;
-            flex-direction: column;
-            background: #000;
+            width: 1920px; height: 1080px;
+            position: absolute; top: 0; left: 100%;
+            transform: rotate(90deg); transform-origin: top left;
+            display: flex; flex-direction: column; background: #000;
         }
 
-        /* CABECERA: Reduje el tamaño para que no se corte */
         header { 
-            height: 180px; 
-            display: flex; 
-            justify-content: space-around; 
-            align-items: center; 
-            background: #111; 
-            border-bottom: 6px solid var(--azul);
-            padding: 0 40px;
+            height: 180px; display: flex; justify-content: space-around; 
+            align-items: center; background: #111; border-bottom: 6px solid var(--azul); 
+            padding: 0 40px; 
         }
+        #clock { font-size: 110px; font-weight: bold; color: var(--azul); font-family: sans-serif; }
+        #weather { font-size: 45px; color: white; text-align: right; font-family: sans-serif; }
 
-        #clock { font-size: 110px; font-weight: bold; color: var(--azul); }
-        #weather { font-size: 45px; color: white; text-align: right; }
+        #media-wrapper { flex-grow: 1; background: #000; position: relative; overflow: hidden; }
+        video, img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; display: none; }
 
-        /* VIDEO: Ahora ocupa el resto del espacio */
-        #video-wrapper { flex-grow: 1; background: #000; overflow: hidden; display: flex; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-
-        /* BANNER INFERIOR */
-        footer { 
-            height: 90px; 
-            background: var(--azul); 
-            display: flex; 
-            align-items: center; 
-            overflow: hidden; 
-        }
-
+        footer { height: 90px; background: var(--azul); display: flex; align-items: center; overflow: hidden; }
         .ticker { 
-            white-space: nowrap; 
-            font-size: 45px; 
-            font-weight: bold; 
-            color: white;
-            animation: move 25s linear infinite; 
+            white-space: nowrap; font-size: 45px; font-weight: bold; color: white; 
+            font-family: sans-serif; animation: move 25s linear infinite; 
         }
+        @keyframes move { 0% { transform: translateX(100%); } 100% { transform: translateX(-150%); } }
 
-        @keyframes move { 
-            0% { transform: translateX(100%); } 
-            100% { transform: translateX(-120%); } 
-        }
-
-        /* BOTÓN DE INICIO (Solo para la primera vez o si se traba) */
-        #play-btn {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); color: white;
-            display: flex; justify-content: center; align-items: center;
-            z-index: 999; font-size: 40px; cursor: pointer;
+        #play-btn { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); color: white; display: flex; 
+            justify-content: center; align-items: center; z-index: 999; 
+            font-size: 50px; cursor: pointer; font-family: sans-serif; text-align: center;
         }
     </style>
 </head>
 <body>
 
-    <div id="play-btn">TOCA LA PANTALLA PARA INICIAR</div>
+    <div id="play-btn">TOCÁ LA PANTALLA <br> PARA INICIAR VIDRIERA</div>
 
     <div id="main-container">
         <header>
@@ -87,52 +52,92 @@
             <div id="weather">San Miguel <br> <span id="temp">--°C</span></div>
         </header>
 
-        <div id="video-wrapper">
+        <div id="media-wrapper">
             <video id="player" muted playsinline></video>
+            <img id="image-viewer" src="">
         </div>
 
         <footer>
             <div class="ticker">
-                +++ ÓPTICA CRISTAL SAN MIGUEL +++ LAS MEJORES MARCAS +++ EXAMEN VISUAL +++ LENTES DE CONTACTO +++
+                +++ ÓPTICA CRISTAL SAN MIGUEL +++ LAS MEJORES MARCAS +++ EXAMEN VISUAL +++ LENTES DE CONTACTO +++ REPARACIONES EN EL ACTO +++
             </div>
         </footer>
     </div>
 
     <script>
+        // URL DE TU SCRIPT DE GOOGLE
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpYBcuSBJCkmCq6FPluaCZaTA0ESezmi_rndYNyMCXID9bDYkscZkRlCC9fl5VJmqf1A/exec';
-        let videoList = [];
+        
+        let mediaList = [];
         let currentIndex = 0;
         const player = document.getElementById('player');
+        const imgViewer = document.getElementById('image-viewer');
         const playBtn = document.getElementById('play-btn');
 
-        // Quitar el cartel de inicio al tocar
         playBtn.onclick = () => {
             playBtn.style.display = 'none';
-            if (videoList.length > 0) reproducir();
+            if (mediaList.length > 0) mostrarSiguiente();
         };
 
-        async function cargarVideos() {
+        async function cargarMedia() {
             try {
                 const res = await fetch(SCRIPT_URL);
-                videoList = await res.json();
-                console.log("Videos:", videoList);
-                // Si ya tocamos el botón, arranca
-                if (playBtn.style.display === 'none') reproducir();
-            } catch (e) { setTimeout(cargarVideos, 5000); }
+                mediaList = await res.json();
+                console.log("Archivos cargados:", mediaList);
+                // Si ya se dio inicio, pero la lista se refrescó, seguimos
+                if (playBtn.style.display === 'none' && player.style.display === 'none' && imgViewer.style.display === 'none') {
+                    mostrarSiguiente();
+                }
+            } catch (e) { 
+                console.error("Error cargando media:", e);
+                setTimeout(cargarMedia, 5000); 
+            }
         }
 
-        function reproducir() {
-            if (videoList.length === 0) return;
-            const id = videoList[currentIndex];
-            player.src = `https://drive.google.com/uc?export=download&id=${id}`;
-            player.play().catch(console.error);
-            currentIndex = (currentIndex + 1) % videoList.length;
+        function mostrarSiguiente() {
+            if (mediaList.length === 0) return;
+            
+            const item = mediaList[currentIndex];
+            const url = `https://drive.google.com/uc?export=download&id=${item.id}`;
+
+            if (item.type === 'video') {
+                imgViewer.style.display = 'none';
+                player.style.display = 'block';
+                player.src = url;
+                player.play().catch(e => console.log("Error autoplay:", e));
+            } else {
+                player.style.display = 'none';
+                player.pause();
+                imgViewer.style.display = 'block';
+                imgViewer.src = url;
+
+                // Lógica de tiempo: busca el número después de "img_"
+                let segundos = 10; 
+                const match = item.name.match(/img_(\d+)/);
+                if (match) {
+                    segundos = parseInt(match[1]);
+                }
+
+                console.log(`Mostrando imagen: ${item.name} por ${segundos} seg.`);
+
+                setTimeout(() => {
+                    proximoItem();
+                }, segundos * 1000);
+            }
         }
 
-        player.onended = () => {
-            if (currentIndex === 0) cargarVideos(); 
-            else reproducir();
-        };
+        function proximoItem() {
+            currentIndex++;
+            if (currentIndex >= mediaList.length) {
+                currentIndex = 0;
+                cargarMedia(); // Recargamos lista de Drive al terminar la vuelta
+            } else {
+                mostrarSiguiente();
+            }
+        }
+
+        // El video pasa al proximo solo cuando termina
+        player.onended = proximoItem;
 
         // Reloj
         setInterval(() => {
@@ -144,14 +149,15 @@
         async function getWeather() {
             try {
                 const res = await fetch('https://wttr.in/San+Miguel,Argentina?format=%t');
-                document.getElementById('temp').innerText = await res.text();
+                const t = await res.text();
+                document.getElementById('temp').innerText = t.replace('+', '');
             } catch (e) { }
         }
 
-        window.onload = () => {
-            cargarVideos();
-            getWeather();
-            setInterval(getWeather, 900000);
+        window.onload = () => { 
+            cargarMedia(); 
+            getWeather(); 
+            setInterval(getWeather, 900000); 
         };
     </script>
 </body>
